@@ -1,0 +1,94 @@
+# ============================================================
+# AI Task Manager API — Requirements
+# Python 3.13.x
+# Last verified: 2025
+# ============================================================
+# Install with:
+#   pip install -r requirements.txt
+# ============================================================
+
+
+# ------------------------------------------------------------
+# MODULE 1 — FastAPI Core
+# Lessons 1-3
+# ------------------------------------------------------------
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+python-multipart==0.0.20
+
+
+# ------------------------------------------------------------
+# MODULE 2 — Database
+# Lessons 4-6
+# ------------------------------------------------------------
+sqlmodel==0.0.22
+sqlalchemy==2.0.36
+
+
+# ------------------------------------------------------------
+# MODULE 3 — Authentication & Security
+# Lessons 7-9
+# ------------------------------------------------------------
+
+# Password hashing
+# NOTE: Using bcrypt 4.1.3 for passlib compatibility
+#       passlib has not been updated since 2020 and prints
+#       a harmless warning with bcrypt 4.2.x
+passlib[bcrypt]==1.7.4
+bcrypt==4.1.3
+
+# JWT tokens
+# NOTE: Using PyJWT instead of python-jose
+#       python-jose is unmaintained since 2022 and has
+#       open security advisories — PyJWT is the safer choice
+PyJWT==2.10.1
+cryptography==43.0.3
+
+
+# ------------------------------------------------------------
+# MODULE 4 — AI Integration
+# Lessons 10-12
+# ------------------------------------------------------------
+anthropic==0.40.0
+
+
+# ------------------------------------------------------------
+# MODULE 5 — Testing
+# Lesson 13
+# ------------------------------------------------------------
+pytest==8.3.4
+pytest-asyncio==0.24.0
+
+# NOTE: httpx is required by FastAPI TestClient
+#       Do not remove this even if you do not use it directly
+httpx==0.28.1
+
+
+# ------------------------------------------------------------
+# MODULE 6 — Production
+# Lessons 14-17
+# ------------------------------------------------------------
+
+# Pydantic v2 — use model_config = ConfigDict() syntax
+# NOT the old class Config: pattern from Pydantic v1
+pydantic==2.10.3
+pydantic-settings==2.7.0
+
+# PostgreSQL driver for production (Render)
+# NOTE: If install fails on Windows run:
+#       pip install psycopg2-binary --only-binary=:all:
+psycopg2-binary==2.9.10
+
+# Database migrations for production
+alembic==1.14.0
+
+# Loads .env files automatically in development
+python-dotenv==1.0.1
+
+
+# ------------------------------------------------------------
+# UTILITIES — Used throughout the course
+# ------------------------------------------------------------
+
+# Required for Pydantic to validate email fields
+email-validator==2.2.0
