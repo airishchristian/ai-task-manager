@@ -1,98 +1,121 @@
 from fastapi import APIRouter, HTTPException
+from sqlmodel import Session, select
 from ...schemas.task import TaskCreate, TaskResponse, TaskUpdate, Status, Priority
+from ...database import engine
+from ...models.task import Task
+
 
 router = APIRouter()
 
 # Temporary in-memory storage (replaces database for now)
 # Think of this as your fake database — just a Python list
-fake_tasks_db = [
-    {"id": 1, "title": "Learn FastAPI", "description":None, "priority":Priority.LOW, "due_date":None, "status": Status.PENDING},
-    {"id": 2, "title": "Build task manager", "description":None, "priority":Priority.LOW, "due_date":None, "status": Status.IN_PROGRESS},
-    {"id": 3, "title": "Deploy to Render", "description":None, "priority":Priority.LOW, "due_date":None, "status": Status.PENDING},
-]
+# fake_tasks_db = [
+#     {"id": 1, "title": "Learn FastAPI", "description":None, "priority":Priority.LOW, "due_date":None, "status": Status.PENDING},
+#     {"id": 2, "title": "Build task manager", "description":None, "priority":Priority.LOW, "due_date":None, "status": Status.IN_PROGRESS},
+#     {"id": 3, "title": "Deploy to Render", "description":None, "priority":Priority.LOW, "due_date":None, "status": Status.PENDING},
+# ]
 
 
 @router.get("/", response_model=list[TaskResponse])
 def get_all_tasks(status: Status | None = None):
     """
     GET /tasks
-    Returns all tasks.
-    If a 'status' query parameter is prov`ided, filter by that status.
+    Returns all tasks, optionally filtered by status.
 
     TODO:
-    - If status is None, return all tasks
-    - If status is provided, return only tasks where task["status"] == status
-    - Hint: think about list comprehension or a simple loop + condition
+    - Open a Session using: with Session(engine) as session:
+    - If status is None, return all tasks using select(Task)
+    - If status is provided, add a .where() filter
+    - Use session.exec(...).all() to get a list
     """
-    tasks = []
-    if status is None:
-        return fake_tasks_db
-    for task in fake_tasks_db:
-        if task['status'] == status.value:
-            tasks.append(task)
-    return tasks
+    with Session(engine) as session:
+        if status is None:
+            statement = select(Task)
+        else:
+            statement = select(Task).where(Task.status == status)
+        result = session.exec(statement).all()
+        return result
 
 @router.get("/{task_id}", response_model=TaskResponse)
 def get_task_by_id(task_id: int):
     """
     GET /tasks/{task_id}
-    Returns a single task by its ID.
 
     TODO:
-    - Loop through fake_tasks_db
-    - Find the task where task["id"] == task_id
-    - If found, return it
-    - If not found, what should you return?
-      Hint: look up HTTPException in FastAPI docs
+    - Open a Session
+    - Use session.get(Task, task_id) to find the task
+    - If task is None, raise HTTPException 404
+    - Otherwise return the task
     """
     # Your implementation goes here
-    for task in fake_tasks_db:
-        if task['id'] == task_id:
-            return task
-    raise HTTPException(status_code=404, detail='Item not found')
-
+    with Session(engine) as session:
+        task = session.get(Task, task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail='Item not found')
+        return task
 
 @router.post("/", response_model=TaskResponse, status_code=201)
 def create_task(task: TaskCreate):
     """
     POST /tasks
-    Creates a new task with the given title.
 
     TODO:
-    - Generate a new id (hint: think about the length of fake_tasks_db)
-    - Create a new task dict with id, title, and a default status of "pending"
-    - Append it to fake_tasks_db
-    - Return the newly created task
+    - Open a Session
+    - Create a Task object from task_data
+      Hint: Task(**task_data.model_dump())
+    - Add it, commit, refresh, return it
     """
     # Your implementation goes here
-    new_task = {
-        "id": len(fake_tasks_db) + 1,
-        "title": task.title,
-        "description": task.description,
-        "priority": task.priority,
-        "due_date": task.due_date,
-        "status": Status.PENDING
-    }
+    with Session(engine) as session:
+        task_data = Task(**task.model_dump())
+        session.add(task_data)
+        session.commit()
+        session.refresh(task_data)
+        return task_data
 
-    fake_tasks_db.append(new_task)
-    return new_task
+
+@router.patch("/{task_id}", response_model=TaskResponse)
+def update_task(task_id: int, task_update: TaskUpdate):
+    """
+    PATCH /tasks/{task_id}
+    Updates only the fields that were sent.
+
+    TODO:
+    - Open a Session
+    - Find the task (raise 404 if not found)
+    - Get only the fields that were actually sent:
+        update_task = task_update.model_dump(exclude_unset=True)
+    - Loop through update_data and use setattr() to apply each change
+    - Add, commit, refresh, return
+    """
+    # Your implementation goes here
+    with Session(engine) as session:
+        task = session.get(Task, task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail='Task not found')
+        
+        update_task = task_update.model_dump(exclude_unset=True)
+        task.sqlmodel_update(update_task)
+        session.add(task)
+        session.commit()
+        session.refresh(task)
+        return task
 
 @router.delete("/{task_id}", status_code=204)
 def delete_task(task_id: int):
     """
     DELETE /tasks/{task_id}
-    Deletes a task by its ID.
 
     TODO:
-    - Find the task with the matching task_id
-    - If not found, raise HTTPException 404
-    - If found, remove it from fake_tasks_db
-      Hint: look up list.remove() or list comprehension to rebuild the list
-    - Return a confirmation message
+    - Open a Session
+    - Find the task (raise 404 if not found)
+    - Delete it, commit, return None
     """
     # Your implementation goes here
-    for num in range(len(fake_tasks_db)):
-        if fake_tasks_db[num]['id'] == task_id:
-            fake_tasks_db.pop(num)
-            return None
-    raise HTTPException(status_code=404, detail='Item not found')
+    with Session(engine) as session:
+        task = session.get(Task, task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        session.delete(task)
+        session.commit()
+        return {"message": "Deleted Successfully"}
