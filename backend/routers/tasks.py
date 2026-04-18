@@ -1,22 +1,23 @@
 from fastapi import APIRouter, HTTPException
+from backend.schemas import TaskCreate, TaskResponse, TaskUpdate, Status, Priority
 
 router = APIRouter()
 
 # Temporary in-memory storage (replaces database for now)
 # Think of this as your fake database — just a Python list
 fake_tasks_db = [
-    {"id": 1, "title": "Learn FastAPI", "status": "pending"},
-    {"id": 2, "title": "Build task manager", "status": "in_progress"},
-    {"id": 3, "title": "Deploy to Render", "status": "pending"},
+    {"id": 1, "title": "Learn FastAPI", "description":None, "priority":Priority.LOW, "due_date":None, "status": Status.PENDING},
+    {"id": 2, "title": "Build task manager", "description":None, "priority":Priority.LOW, "due_date":None, "status": Status.IN_PROGRESS},
+    {"id": 3, "title": "Deploy to Render", "description":None, "priority":Priority.LOW, "due_date":None, "status": Status.PENDING},
 ]
 
 
-@router.get("/", status_code=200)
-def get_all_tasks(status: str = None):
+@router.get("/", response_model=list[TaskResponse])
+def get_all_tasks(status: Status | None = None):
     """
     GET /tasks
     Returns all tasks.
-    If a 'status' query parameter is provided, filter by that status.
+    If a 'status' query parameter is prov`ided, filter by that status.
 
     TODO:
     - If status is None, return all tasks
@@ -27,11 +28,11 @@ def get_all_tasks(status: str = None):
     if status is None:
         return fake_tasks_db
     for task in fake_tasks_db:
-        if task['status'] == status:
+        if task['status'] == status.value:
             tasks.append(task)
     return tasks
 
-@router.get("/{task_id}", status_code=200)
+@router.get("/{task_id}", response_model=TaskResponse)
 def get_task_by_id(task_id: int):
     """
     GET /tasks/{task_id}
@@ -51,8 +52,8 @@ def get_task_by_id(task_id: int):
     raise HTTPException(status_code=404, detail='Item not found')
 
 
-@router.post("/", status_code=201)
-def create_task(title: str):
+@router.post("/", response_model=TaskResponse, status_code=201)
+def create_task(task: TaskCreate):
     """
     POST /tasks
     Creates a new task with the given title.
@@ -66,14 +67,17 @@ def create_task(title: str):
     # Your implementation goes here
     new_task = {
         "id": len(fake_tasks_db) + 1,
-        "title": title,
-        "status": "pending", 
+        "title": task.title,
+        "description": task.description,
+        "priority": task.priority,
+        "due_date": task.due_date,
+        "status": Status.PENDING
     }
-    fake_tasks_db.append(new_task)
 
+    fake_tasks_db.append(new_task)
     return new_task
 
-@router.delete("/{task_id}", status_code=200)
+@router.delete("/{task_id}", status_code=204)
 def delete_task(task_id: int):
     """
     DELETE /tasks/{task_id}
@@ -90,4 +94,5 @@ def delete_task(task_id: int):
     for num in range(len(fake_tasks_db)):
         if fake_tasks_db[num]['id'] == task_id:
             fake_tasks_db.pop(num)
-            return "Deleted Successfully"
+            return None
+    raise HTTPException(status_code=404, detail='Item not found')
