@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from .routers import tasks
+from .api.routes import tasks
 
 app = FastAPI(
     title='AI Task Manager',
