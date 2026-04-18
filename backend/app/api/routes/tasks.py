@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from backend.schemas import TaskCreate, TaskResponse, TaskUpdate, Status, Priority
+from ...schemas.task import TaskCreate, TaskResponse, TaskUpdate, Status, Priority
 
 router = APIRouter()
 
