@@ -1,13 +1,16 @@
+# app/database.py
 from sqlmodel import SQLModel, create_engine
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# TODO: Import your Task model
-# WHY: SQLModel must "see" the model before create_all works
-# from app.models.??? import ???
+# TODO: Import BOTH models here
+# WHY: SQLModel must "see" every model before create_all runs
+# from .models.task import Task
+# from .models.??? import ???
 from .models.task import Task
+from .models.user import User
 
 
 # TODO: Define the SQLite database URL
