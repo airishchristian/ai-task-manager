@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from app.api.routes import tasks
+from app.api.routes import auth
 from app.database import create_db_and_tables
 
 
@@ -23,6 +24,10 @@ app.include_router(tasks.router,
                    prefix='/tasks',
                    tags=['tasks']
                    )
+
+app.include_router(auth.router,
+                   prefix='/auth',
+                   tags=["auth"])
 
 @app.get('/')
 def root():
