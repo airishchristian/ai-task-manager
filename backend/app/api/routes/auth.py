@@ -2,8 +2,8 @@ from fastapi import APIRouter, HTTPException
 from sqlmodel import Session, select
 from ...database import engine
 from ...models.user import User
-from ...schemas.user import UserCreate,UserResponse
-from ...core.security import hash_password
+from ...schemas.user import UserCreate, UserResponse, UserLogin, Token
+from ...core.security import hash_password, verify_password, create_access_token
 
 
 router = APIRouter()
@@ -40,4 +40,35 @@ def register(user_data: UserCreate):
         session.commit()
         session.refresh(user)
         return user
+
+@router.post("/login", response_model=Token)
+def login(user_credentials: UserLogin):
+    """
+    POST /auth/login
+    Verifies credentials and returns a JWT token.
+
+    TODO:
+    - Open a Session
+    - Query the database for a user with the matching email
+      Hint: select(User).where(User.email == user_credentials.email)
+    - If no user found → raise HTTPException 401
+      Why 401 and not 404? Think about this — what are we protecting?
+    - Use verify_password() to check the submitted password against the stored hash
+    - If password is wrong → raise HTTPException 401
+      Use the SAME error message as "user not found" — why is this important?
+    - Call create_access_token(data={"sub": user.email})
+    - Return {"access_token": token, "token_type": "bearer"}
+    """
+    # Your implementation goes here
+    with Session(engine) as session:
+        statement = select(User).where(User.email == user_credentials.email)
+        result = session.exec(statement).first()
+        if result is None:
+            raise HTTPException(status_code=401, detail="Invalid Email or Password")
+        is_verified = verify_password(user_credentials.password, result.hashed_password)
+        if not is_verified:
+            raise HTTPException(status_code=401, detail="Invalid Email or Password")
+        token = create_access_token(data={"sub": user_credentials.email})
+        return {"access_token": token, "token_type": "bearer"}
+
 
