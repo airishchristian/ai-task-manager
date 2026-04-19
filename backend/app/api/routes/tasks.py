@@ -17,22 +17,24 @@ router = APIRouter()
 
 
 @router.get("/", response_model=list[TaskResponse])
-def get_all_tasks(status: Status | None = None):
+def get_all_tasks(status: Status | None = None, user_id: int | None = None):
     """
-    GET /tasks
-    Returns all tasks, optionally filtered by status.
+    GET /tasks?status=pending&user_id=1
 
     TODO:
-    - Open a Session using: with Session(engine) as session:
-    - If status is None, return all tasks using select(Task)
-    - If status is provided, add a .where() filter
-    - Use session.exec(...).all() to get a list
+    - Open a Session
+    - Start with statement = select(Task)
+    - If status is provided, add .where(Task.status == status)
+    - If user_id is provided, add .where(Task.user_id == user_id)
+    - Hint: you can chain .where() calls
+    - Return session.exec(statement).all()
     """
     with Session(engine) as session:
-        if status is None:
-            statement = select(Task)
-        else:
-            statement = select(Task).where(Task.status == status)
+        statement = select(Task)
+        if status is not None:
+            statement = statement.where(Task.status == status)
+        if user_id is not None:
+            statement = statement.where(Task.user_id == user_id)
         result = session.exec(statement).all()
         return result
 
@@ -94,8 +96,8 @@ def update_task(task_id: int, task_update: TaskUpdate):
         if not task:
             raise HTTPException(status_code=404, detail='Task not found')
         
-        update_task = task_update.model_dump(exclude_unset=True)
-        task.sqlmodel_update(update_task)
+        update_data = task_update.model_dump(exclude_unset=True)
+        task.sqlmodel_update(update_data)
         session.add(task)
         session.commit()
         session.refresh(task)
@@ -118,4 +120,4 @@ def delete_task(task_id: int):
             raise HTTPException(status_code=404, detail="Task not found")
         session.delete(task)
         session.commit()
-        return {"message": "Deleted Successfully"}
+        return None
