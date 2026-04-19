@@ -20,3 +20,17 @@ class UserResponse(BaseModel):
     name: str
     email: EmailStr
     model_config = ConfigDict(from_attributes=True)
+
+
+class UserLogin(BaseModel):
+    # TODO: What two fields does a login form need?
+    # Your implementation goes here
+    email: EmailStr
+    password: str
+
+class Token(BaseModel):
+    # TODO: What does a successful login return?
+    # Hint: Look at the OAuth2 standard — {"access_token": "...", "token_type": "bearer"}
+    # Your implementation goes here
+    access_token: str
+    token_type: str = "bearer"

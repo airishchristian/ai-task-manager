@@ -1,12 +1,14 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from fastapi.security import OAuth2PasswordBearer
 from sqlmodel import Session, select
 from ...schemas.task import TaskCreate, TaskResponse, TaskUpdate, Status, Priority
 from ...database import engine
 from ...models.task import Task
+from ...core.security import verify_token
 
 
 router = APIRouter()
-
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 # Temporary in-memory storage (replaces database for now)
 # Think of this as your fake database — just a Python list
 # fake_tasks_db = [
@@ -15,17 +17,36 @@ router = APIRouter()
 #     {"id": 3, "title": "Deploy to Render", "description":None, "priority":Priority.LOW, "due_date":None, "status": Status.PENDING},
 # ]
 
+def get_current_user_email(token: str = Depends(oauth2_scheme)) -> str:
+    """
+    TODO:
+    - Call verify_token(token)
+    - If the result is None → raise HTTPException 401
+      with detail="Invalid or expired token"
+      and headers={"WWW-Authenticate": "Bearer"}
+    - Return the email string
+    """
+    # Your implementation goes here
+    verified = verify_token(token)
+    if not verified:
+        raise HTTPException(status_code=401, 
+                            detail="Invalid or expired token",
+                            headers={"WWW-Authenticate": "Bearer"}
+        )
+    return verified
 
 @router.get("/", response_model=list[TaskResponse])
-def get_all_tasks(status: Status | None = None, user_id: int | None = None):
+def get_all_tasks(status: Status | None = None, 
+                  current_user: str = Depends(get_current_user_email)
+):
     """
-    GET /tasks?status=pending&user_id=1
+    GET /tasks?status=pending&current_user=1
 
     TODO:
     - Open a Session
     - Start with statement = select(Task)
     - If status is provided, add .where(Task.status == status)
-    - If user_id is provided, add .where(Task.user_id == user_id)
+    - If current_user is provided, add .where(Task.current_user == current_user)
     - Hint: you can chain .where() calls
     - Return session.exec(statement).all()
     """
@@ -33,8 +54,6 @@ def get_all_tasks(status: Status | None = None, user_id: int | None = None):
         statement = select(Task)
         if status is not None:
             statement = statement.where(Task.status == status)
-        if user_id is not None:
-            statement = statement.where(Task.user_id == user_id)
         result = session.exec(statement).all()
         return result
 
