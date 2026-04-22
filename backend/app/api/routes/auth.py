@@ -1,15 +1,17 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
-from ...database import engine
 from ...models.user import User
 from ...schemas.user import UserCreate, UserResponse, UserLogin, Token
 from ...core.security import hash_password, verify_password, create_access_token
-
+from ...dependencies.database import get_db
 
 router = APIRouter()
 
 @router.post("/register", response_model=UserResponse, status_code=201)
-def register(user_data: UserCreate):
+def register(
+    user_data: UserCreate,
+    db: Session = Depends(get_db)
+):
     """
     POST /auth/register
     Creates a new user account with a hashed password.
@@ -27,22 +29,24 @@ def register(user_data: UserCreate):
     5. Add, commit, refresh, return
     """
     # your implementation
-    with Session(engine) as session:
-        statement = select(User).where(User.email == user_data.email)
-        result = session.exec(statement).first()
-        if result is not None:
-            raise HTTPException(status_code=400, detail="Email already registered.")
-        user_data = user_data.model_dump()
-        user_data["hashed_password"] = hash_password(user_data["password"])
-        user_data.pop("password")
-        user = User(**user_data)
-        session.add(user)
-        session.commit()
-        session.refresh(user)
-        return user
+    statement = select(User).where(User.email == user_data.email)
+    result = db.exec(statement).first()
+    if result is not None:
+        raise HTTPException(status_code=400, detail="Email already registered.")
+    user_data = user_data.model_dump()
+    user_data["hashed_password"] = hash_password(user_data["password"])
+    user_data.pop("password")
+    user = User(**user_data)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
 
 @router.post("/login", response_model=Token)
-def login(user_credentials: UserLogin):
+def login(
+    user_credentials: UserLogin, 
+    db: Session = Depends(get_db)
+):
     """
     POST /auth/login
     Verifies credentials and returns a JWT token.
@@ -60,15 +64,15 @@ def login(user_credentials: UserLogin):
     - Return {"access_token": token, "token_type": "bearer"}
     """
     # Your implementation goes here
-    with Session(engine) as session:
-        statement = select(User).where(User.email == user_credentials.email)
-        result = session.exec(statement).first()
-        if result is None:
-            raise HTTPException(status_code=401, detail="Invalid Email or Password")
-        is_verified = verify_password(user_credentials.password, result.hashed_password)
-        if not is_verified:
-            raise HTTPException(status_code=401, detail="Invalid Email or Password")
-        token = create_access_token(data={"sub": user_credentials.email})
-        return {"access_token": token, "token_type": "bearer"}
+
+    statement = select(User).where(User.email == user_credentials.email)
+    result = db.exec(statement).first()
+    if result is None:
+        raise HTTPException(status_code=401, detail="Invalid Email or Password")
+    is_verified = verify_password(user_credentials.password, result.hashed_password)
+    if not is_verified:
+        raise HTTPException(status_code=401, detail="Invalid Email or Password")
+    token = create_access_token(data={"sub": user_credentials.email})
+    return {"access_token": token, "token_type": "bearer"}
 
 
