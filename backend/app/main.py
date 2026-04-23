@@ -2,8 +2,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from app.api.routes import tasks
 from app.api.routes import auth
+from app.api.routes import task_breakdown
 from app.database import create_db_and_tables
+from dotenv import load_dotenv
 
+load_dotenv()
 
 # TODO: Implement the lifespan function
 # This runs create_db_and_tables at startup
@@ -28,6 +31,10 @@ app.include_router(tasks.router,
 app.include_router(auth.router,
                    prefix='/auth',
                    tags=["auth"])
+
+app.include_router(task_breakdown.router,
+                   prefix='/breakdown',
+                   tags=["breakdown"])
 
 @app.get('/')
 def root():
