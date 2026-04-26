@@ -136,3 +136,48 @@ def suggest_priority(
         return parsed_response
     except (json.JSONDecodeError, KeyError):
         return {"priority": "medium", "reasoning": "Could not parse AI response"}
+    
+
+
+def generate_weekly_summary(tasks: list, user_name: str) -> str:
+    """
+    Takes a list of task dicts and a user name.
+    Returns a plain-text productivity summary string.
+    """
+    # TODO: Build a system prompt that tells Claude:
+    # - Its role: a productivity coach writing a weekly summary
+    # - Output format: plain text (NOT JSON this time — why not?)
+    # - Tone: encouraging and constructive
+    # - Length: 3-4 sentences max
+    system_prompt = """
+                    You are a productivity coach writing a weekly summary.
+                    Output format: plain text (NOT JSON).
+                    Tone: Encouraging and constructive.
+                    Length: 3-4 sentences max
+                    """
+
+    # TODO: Build the user message
+    # Hint: You need to summarize the tasks list into readable text
+    # Think: how do you convert a list of task objects into a string?
+    # One approach: loop and build a formatted string
+    user_message = f"Write a weekly summary for {user_name}.\n\nTheir tasks:\n"
+    for task in tasks:
+        user_message += f"- {task['title']} | status: {task['status']} | priority: {task['priority']}\n"
+
+    # TODO: Call Claude, extract response.content[0].text
+    response = client.messages.create(
+        model= "claude-haiku-4-5-20251001",
+        max_tokens = 200,
+        system = system_prompt,
+        messages = [
+            {"role": "user", "content": user_message}
+        ]
+    )
+
+    # TODO: Return the text string (no JSON parsing needed this time)
+    raw_response = response.content[0].text
+    message_to_user = raw_response.strip()
+    if message_to_user.startswith("```"):
+        message_to_user = message_to_user.split("\n", 1)[1]  # remove first line (```json)
+        message_to_user = message_to_user.rsplit("```", 1)[0]  # remove trailing ```
+    return f"Hi, {user_name}! {message_to_user}"

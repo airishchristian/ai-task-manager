@@ -24,9 +24,9 @@ def get_all_tasks(
     - Hint: you can chain .where() calls
     - Return session.exec(statement).all()
     """
-    statement = select(Task)
+    statement = select(Task).where(Task.user_id == current_user.id)
     if status is not None:
-        statement = statement.where(Task.status == status).where(Task.user_id == current_user.id)
+        statement = statement.where(Task.status == status)
     result = db.exec(statement).all()
     return result
 
@@ -67,7 +67,7 @@ def create_task(
     - Add it, commit, refresh, return it
     """
     # Your implementation goes here
-    task_data = Task(**task.model_dump())
+    task_data = Task(**task.model_dump(), user_id=current_user.id)
     db.add(task_data)
     db.commit()
     db.refresh(task_data)

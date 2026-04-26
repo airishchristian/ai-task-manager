@@ -12,7 +12,7 @@ load_dotenv()
 # from .models.??? import ???
 from .models.task import Task
 from .models.user import User
-
+from .models.summary import Summary
 
 # TODO: Define the SQLite database URL
 # Format: "sqlite:///./filename.db"
